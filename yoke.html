@@ -1,0 +1,489 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<title>Scotch Yoke</title>
+<meta name="description" content="" />
+<meta name="author" content="Yuvraj Singh, maligndrome" />
+<meta name="viewport" content="width=device-width; initial-scale=1.0" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<script src='js/jquery.min.js'></script>
+		<script src='js/ext-jquery-ui.min.js'></script>
+
+
+
+<link rel='stylesheet' href='css/Aristo/Aristo.css' />
+<!--
+<script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="js/jquery-ui/ui/jquery-ui.js"></script>
+		<link rel='stylesheet' href='http://code.jquery.com/ui/1.10.0/themes/base/jquery-ui.css' />
+				-->
+<link rel='stylesheet' href='css/styles.css' />
+</head>
+
+<body>
+<div id="main-container">
+  <header> </header>
+ 
+  <div id="container">
+ 
+    <h1>Scotch Yoke Mechanism</h1>
+    <div id="canvas-container">
+    <div id="initscreen">
+    Select the values at the right and press play to start the simulation!
+    </div>
+      <nav id="prevnext" style="display:none"> <button id="prev" onClick="prev()" style="display:none" class="removestyle"><img src="img/bluebkdulls.png" height="25" /></button>
+    <button id = "next" onClick="next()" class="removestyle"><img src="img/bluefwddulls.png"  height="25"  /></button> </nav>
+      <div id="position">
+        <h2>Position Diagram</h2>
+        
+        <canvas id = "pos" height="400px" width="400px"></canvas>
+        </div>
+      <div id = "velocity">
+        <h2>Velocity Diagram </h2>
+        <canvas id = "vel" height="200px" width="200px"></canvas>
+        </div>
+      <div id = "acceleration">
+        <h2>Acceleration Diagram</h2>
+        <canvas id = "acc" height="200px" width="200px"></canvas>
+        </div>
+      <div id="log">
+
+        <div id = "velocity-table" style="width:200px; height:200px;">
+        <table>
+         <tr>
+<th>Velocity</th>
+<th>Magnitude<br />(mm/s)</th>
+</tr>
+<tr>
+<td>V<sub>a</sub></td>
+<td id="va"></td>
+</tr>
+<tr>
+<td>V<sub>ab</sub></td>
+<td id="vab"></td>
+</tr>
+<tr>
+<td>V<sub>b</sub></td>
+<td id="vb"></td>
+</tr>
+        </table><br>
+        </div>
+              <div id = "acceleration-table" style="width:200px; height:200px;">
+        <table >
+<tr>
+<th>Acceleration</th>
+<th>Magnitude<br />(mm/s<sup>2</sup>)</th>
+<tr>
+<td>A<sub>a</sub><sup>n</sup> = A<sub>a</sub></td>
+<td id="aa"></td>
+</tr>
+<tr>
+<td>A<sub>b</sub></td>
+<td id="ab"></td>
+</tr>
+<tr>
+<td>A<sub>ab</sub></td>
+<td id="aab"></td>
+</tr>
+        </table>
+         
+        </div>
+        </div>
+      </div>
+      
+    
+    <div id = "controls">
+       <div id="controls-1">
+        <h3>Variables</h3>
+        Rotating arm length (r) =
+        <input type="range"  id='r'  oninput="updatedvals(); pause(); setval(); updatetables();" >
+        </input>
+        <span id="valr"></span><span>mm</span><br/>
+        <br/>
+        <br/>
+        <div id = "w2">
+        ω=
+        <input type="range" id='omega' oninput="updatedvals(); pause(); setval(); updatetables();">
+        </input>
+        <span id="valw"></span><span>rad/s</span><br/>
+        <div id="error"></div>
+        <script>
+		updatedvals();
+		function updatedvals()
+		{
+		r_disp=(25+document.getElementById('r').value/2).toFixed(2);
+		w_disp=(document.getElementById('omega').value/100).toFixed(2);
+		$('#valr').html(r_disp);
+		$('#valw').html(w_disp);
+		}
+		</script>       
+        </div>
+        
+        <div id="theta2" style="display:none;">
+    &theta;<sub>2</sub> = 
+       <input type="number"   id='label-theta2'>
+        </input>
+        &deg; <br/>
+        <div class="slider" id ="val-theta2" ></div>
+        
+        </div>
+        <br/>
+        <br/>
+      </div>
+      <div id="controls-2">
+        <h3>Controls</h3><br/>
+<br/>
+<button onclick="setval()"  class="removestyle"><img src="img/playbluedulls.png" /></button>
+        <button onclick="pause()" id="pause" class="removestyle"> <img src="img/pausebluedulls.png" /> </button>
+        <button onclick="reverseit()" id="reverse" class="removestyle"> <img src="img/reverse.png" /> </button>
+      </div>
+    </div>
+    <div id="copyright" >&copy; Solve @ NITK Surathkal</div>
+  </div>
+  <footer>
+   
+  </footer>
+</div>
+</body>
+<script type="text/javascript">
+	globctr=0;
+var canvas1=document.getElementById("pos");
+var pos=canvas1.getContext("2d");
+var canvas2=document.getElementById("vel");
+var vel=canvas2.getContext("2d");
+var canvas3=document.getElementById("acc");
+var acc=canvas3.getContext("2d");
+var deg = new Array();
+var theta;
+var angacc=0;
+var w=1;
+var i=0;
+var scalevel=0;
+var scaleacc=0;
+var largest;
+var set_rev=0;
+Aa_angle=180*Math.atan(angacc/(w*w))/3.142;
+function compute()
+{
+for( theta = 0; theta < 360; theta += 1)
+{
+	w=1;
+	theta2=theta*3.142/180;
+	deg[i] = new Object();
+	deg[i]["linex"]=100+25*Math.cos(theta2);
+	deg[i]["liney"]=100+25*Math.sin(theta2);
+	deg[i]["sliderx"]=95+25*Math.cos(theta2);
+	deg[i]["slidery"]=95+25*Math.sin(theta2);
+	deg[i]["slotx"]=93+25*Math.cos(theta2);
+	deg[i]["osc"]=107+25*Math.cos(theta2);
+	deg[i]["va"]=1*w;
+		deg[i]["vb"]=1*w*Math.sin(theta2);
+	deg[i]["vab"]=-1*w*Math.cos(theta2);
+	largest=Math.max(deg[i]["va"],deg[i]["vb"],deg[i]["vab"]);
+	if(largest>scalevel)
+	scalevel=largest;
+	deg[i]["Aa"]=1*w*w;
+	deg[i]["Ab"]=1*w*w*Math.cos(theta2);
+	deg[i]["Aab"]=-1*w*w*Math.sin(theta2);
+	largest=Math.max(deg[i]["Aa"],deg[i]["Ab"],deg[i]["Aab"]);
+	if(largest>scaleacc)
+	scaleacc=largest;
+	++i;
+}
+ctrmax=i;
+i=0;
+if(set_rev==-1)
+i=ctrmax-1;
+
+}
+function code()
+{
+	r=document.getElementById('r').value/2;
+	pos.clearRect(0,0,400,400);
+pos.beginPath();
+pos.moveTo(100,100);
+var mcos=r*Math.cos(i*3.142/180);
+var msin=r*Math.sin(i*3.142/180);
+pos.lineTo(deg[i]["linex"]+mcos,deg[i]["liney"]+msin);
+pos.rect(deg[i]["sliderx"]+mcos,deg[i]["slidery"]+msin,10,10);
+pos.rect(deg[i]["slotx"]+mcos,20,14,180);
+pos.rect(deg[i]["osc"]+mcos,93,100,14);
+pos.font="15px Arial";
+pos.fillText("a",deg[i]["sliderx"]+20+mcos,deg[i]["slidery"]+msin+10);
+pos.fillText("b",deg[i]["slotx"]+100+mcos,114-10);
+pos.strokeStyle="000000";
+pos.stroke();
+pos.beginPath();
+pos.arc(100,100, 2, 0, 2 * Math.PI, false);
+
+pos.stroke();
+
+}
+function counter()
+{
+	if(set_rev==-1)
+	{
+		if(i>0)
+		--i;
+		else
+		i=ctrmax-1;
+	}
+	else
+	{
+		if(i<ctrmax-1)
+		++i;
+		else
+		i=0;
+	}
+}
+function vector(ctx,startx,starty,endx,endy,len,color,text)
+{
+	if(len)
+	{
+	var theta2=-1*Math.atan2((endy-starty),(endx-startx));
+	var currx1=0.5*(startx+endx);
+	var curry1=0.5*(starty+endy);
+	ctx.beginPath();
+	ctx.fillText(text,currx1,curry1);
+	ctx.moveTo(endx, endy);
+	ctx.lineTo(startx,starty);
+	ctx.lineTo(startx+0.2*len*Math.cos(theta2+0.3142),starty-0.2*len*Math.sin(theta2+0.3142));
+	ctx.moveTo(startx,starty);
+	ctx.lineTo(startx+0.2*len*Math.cos(theta2-0.3142),starty-0.2*len*Math.sin(theta2-0.3142));
+	ctx.lineWidth=1;
+	ctx.strokeStyle=color;
+	ctx.stroke();
+	}
+}
+
+function vector2(ctx,inc,startx,starty,len,color,text)
+{
+	if(len)
+	{
+	var theta2=inc*3.142/180;
+		currx=startx+len*Math.cos(theta2);
+	curry=startx-len*Math.sin(theta2);
+	var currx1=startx+0.5*len*Math.cos(theta2);
+	var curry1=starty-0.5*len*Math.sin(theta2);
+	ctx.beginPath();
+	ctx.fillText(text,currx1,curry1);
+	ctx.moveTo(startx+len*Math.cos(theta2), starty-len*Math.sin(theta2));
+	ctx.lineTo(startx,starty);
+	ctx.lineTo(startx+0.2*len*Math.cos(theta2+0.3142),starty-0.2*len*Math.sin(theta2+0.3142));
+	ctx.moveTo(startx,starty);
+	ctx.lineTo(startx+0.2*len*Math.cos(theta2-0.3142),starty-0.2*len*Math.sin(theta2-0.3142));
+	ctx.lineWidth=1;
+	ctx.strokeStyle=color;
+	ctx.stroke();
+	}
+}
+currx=0;
+curry=0;
+function vectordashed(ctx,inc,startx,starty,len,color)
+{
+	if(len)
+	{
+	var theta2=inc*3.142/180;
+	currx=startx+len*Math.cos(theta2);
+	curry=startx-len*Math.sin(theta2);
+		var currx1=startx+0.3*len*Math.cos(theta2);
+	var curry1=startx-0.3*len*Math.sin(theta2);
+	var counter=10;
+	ctx.beginPath();
+	ctx.moveTo(startx+len*Math.cos(theta2), starty-len*Math.sin(theta2));
+	while(counter>1)
+	{	if(counter%2==0)
+		ctx.lineTo(startx+0.1*counter*len*Math.cos(theta2), starty-0.1*counter*len*Math.sin(theta2));
+		else
+		ctx.moveTo(startx+0.1*counter*len*Math.cos(theta2), starty-0.1*counter*len*Math.sin(theta2));
+		--counter;
+	}
+	ctx.moveTo(startx,starty);
+	ctx.lineTo(startx+0.2*len*Math.cos(theta2+0.3142),starty-0.2*len*Math.sin(theta2+0.3142));
+	ctx.moveTo(startx,starty);
+	ctx.lineTo(startx+0.2*len*Math.cos(theta2-0.3142),starty-0.2*len*Math.sin(theta2-0.3142));
+	ctx.lineWidth=1;
+	ctx.strokeStyle=color;
+	ctx.stroke();
+	}
+}
+theta3=0;
+j=0;
+function velpolygon()
+{
+		var rfactor=document.getElementById('r').value/1;
+var scalingfactor=omegaval*(25+rfactor);
+	if(theta3<360)
+	{
+		++theta3;
+	++j;}
+	else
+	{
+	j=0;
+	theta3=0;
+	}
+	
+	vel.clearRect(0,0,200,200);
+	vector2(vel,0,100-deg[i]["vb"]*100/scalevel,100,deg[i]["vb"]*100/scalevel,"#FF0000","vb");
+	vector2(vel,-90,100,100,deg[i]["vab"]*100/scalevel,"#00FF00","vab");
+	vector(vel,100-deg[i]["vb"]*100/scalevel,100,100,100+deg[i]["vab"]*100/scalevel,deg[i]["va"]*100/scalevel,"#0000FF","va");
+	if(!(j%10))
+	{
+	$('#va').text((deg[i]["va"]*scalingfactor).toFixed(2));
+	$('#vab').text((deg[i]["vab"]*scalingfactor).toFixed(2));
+	$('#vb').text((deg[i]["vb"]*scalingfactor).toFixed(2));
+	}
+}
+
+function accpolygon()
+{
+	var rfactor=document.getElementById('r').value/1;
+var scalingfactor=omegaval*omegaval*(25+rfactor);
+	acc.clearRect(0,0,200,200);
+	vector2(acc,0,100-deg[i]["Ab"]*100/scaleacc,100,deg[i]["Ab"]*100/scaleacc,"#FF0000","Ab");
+	vector2(acc,90,100,100,deg[i]["Aab"]*100/scaleacc,"#00FF00","Aab");
+	vector(acc,100-deg[i]["Ab"]*100/scaleacc,100,100,100-deg[i]["Aab"]*100/scaleacc,deg[i]["Aa"],"#0000FF","Aa");
+	if(!(j%10))
+	{
+	$('#aa').text((deg[i]["Aa"]*scalingfactor).toFixed(2));
+	$('#ab').text((deg[i]["Ab"]*scalingfactor).toFixed(2));
+	$('#aab').text((deg[i]["Aab"]*scalingfactor).toFixed(2));
+	}
+}
+function updatetables()
+{
+	var rfactor=document.getElementById('r').value/1;
+	var scalingfactor=omegaval*(25+rfactor);
+	$('#aa').text((deg[i]["Aa"]*scalingfactor*omegaval).toFixed(2));
+	$('#ab').text((deg[i]["Ab"]*scalingfactor*omegaval).toFixed(2));
+	$('#aab').text((deg[i]["Aab"]*scalingfactor*omegaval).toFixed(2));
+	$('#va').text((deg[i]["va"]*scalingfactor).toFixed(2));
+	$('#vab').text((deg[i]["vab"]*scalingfactor).toFixed(2));
+	$('#vb').text((deg[i]["vb"]*scalingfactor).toFixed(2));
+
+}	
+
+	
+var first=0;
+clrpos=0;
+function setval()
+{
+var speed=0.02*document.getElementById("omega").value;
+	omegaval=document.getElementById("omega").value/100;
+	if(speed)
+	var time=17.45/speed;
+	if(!clrpos)
+	{
+	if(!first)
+	{
+	compute();
+	theta3=0;
+	first=1;
+	$('#initscreen').hide();
+	displaydivs(-2);
+	$('#prevnext').show();
+	}
+	if(speed)
+	{
+	clrpos=setInterval(code,time);
+	clrcounter=setInterval(counter,time);
+	clrvel=setInterval(velpolygon,time);
+	clracc=setInterval(accpolygon,time);
+	}
+	else
+	code();
+	}
+	return null;
+}	
+function pause()
+{
+	clearInterval(clrpos);
+	clrpos=0;
+	clearInterval(clrcounter);
+	clearInterval(clrvel);
+	clearInterval(clracc);
+}
+function reverseit()
+{
+	pause();
+	if(set_rev==0)
+	set_rev=-1;
+	else
+	set_rev=0;
+	setval();
+}
+curr_flag=0;
+function prev()
+{
+	--curr_flag;
+	if(curr_flag==0)
+		$('#prev').hide();
+	if(curr_flag==1)
+		$('#next').show();
+	console.log(curr_flag);
+	displaydivs(curr_flag);
+}
+
+function next()
+{
+	++curr_flag;
+	if(curr_flag==1)
+		$('#prev').show();
+	if(curr_flag==2)
+		$('#next').hide();
+	console.log(curr_flag);
+	displaydivs(curr_flag);
+}
+function displaydivs(x)
+{
+	if(x==0)
+	{
+		$('#position').show();
+		pos.canvas.width  = 400;
+  pos.canvas.height = 400;
+		pos.scale(1,1);
+		$('#velocity').hide();	
+		$('#acceleration').hide();
+		$('#log').hide();
+	}
+	else if(x==1)
+	{
+		$('#position').show();
+		pos.canvas.width  = 300;
+  pos.canvas.height = 200;
+		pos.scale(1,1);
+		$('#velocity').show();	
+		$('#acceleration').show();
+		$('#log').hide();
+	}
+	else if(x==2)
+	{
+		pos.scale(1,1);
+		$('#position').hide();
+		$('#velocity').show();	
+		$('#acceleration').show();
+		$('#log').show();
+	}
+	else if(x==-2)
+	{
+		$('#position').show();
+		$('#velocity').hide();	
+		$('#acceleration').hide();
+		$('#log').hide();	
+	}
+	else
+	{
+		$('#prevnext').hide();
+		$('#position').hide();
+		$('#velocity').hide();	
+		$('#acceleration').hide();
+		$('#log').hide();	
+	}
+}
+displaydivs(-1);
+	</script>
+<style type="text/css"></style>
+</html>
